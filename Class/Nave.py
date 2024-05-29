@@ -10,10 +10,10 @@ class ATK(Exception):
         
 class Nave:
 
-    def __init__(self,x,y):
+    def __init__(self,x,y): 
         self.x = x
         self.y = y
-        self.direccion = 0.0
+        self.direccion = math.pi/2
         self.radio = NAVE_RAD
         self.front = Vector2(0,0)
         self.back_l = Vector2(0,0)
@@ -29,6 +29,9 @@ class Nave:
         self.vida = 4
         self.point = 0
         self.area = 0
+        self.control = -1
+        self.live_time = 0
+        self.bonus = 0
 
     def posFront(self):
         v_unit = self.vectorUnitario(self.direccion)
@@ -74,57 +77,59 @@ class Nave:
         self.down_b = keys[pygame.K_s]
         self.left_b = keys[pygame.K_a]
         self.right_b = keys[pygame.K_d]
-        self.right_b = keys[pygame.K_d]
         self.brake_b = keys[pygame.K_SPACE]
         mouse = pygame.mouse.get_pressed()
         self.atk_b = mouse[0]
        
     def velocidad(self):
-        """
-        if self.up_b:
-            if self.right_b:
-                self.vel.x = math.sin(math.pi/4) * NAVE_VEL
-                self.vel.y = -math.sin(math.pi/4) * NAVE_VEL
+        if(self.control == 0):
+            if self.up_b:
+                if self.right_b:
+                    self.vel.x = math.sin(math.pi/4) * NAVE_VEL
+                    self.vel.y = -math.sin(math.pi/4) * NAVE_VEL
+                elif self.left_b:
+                    self.vel.x = -math.sin(math.pi/4) * NAVE_VEL
+                    self.vel.y = -math.sin(math.pi/4) * NAVE_VEL
+                else:
+                    self.vel.x = 0
+                    self.vel.y = -NAVE_VEL
+            elif self.down_b:
+                if self.right_b:
+                    self.vel.x = math.sin(math.pi/4) * NAVE_VEL
+                    self.vel.y = math.sin(math.pi/4) * NAVE_VEL
+                elif self.left_b:
+                    self.vel.x = -math.sin(math.pi/4) * NAVE_VEL
+                    self.vel.y = math.sin(math.pi/4) * NAVE_VEL
+                else:
+                    self.vel.x = 0
+                    self.vel.y = NAVE_VEL
+            elif self.right_b:
+                self.vel.x = NAVE_VEL
+                self.vel.y = 0
             elif self.left_b:
-                self.vel.x = -math.sin(math.pi/4) * NAVE_VEL
-                self.vel.y = -math.sin(math.pi/4) * NAVE_VEL
-            else:
+                self.vel.x = -NAVE_VEL
+                self.vel.y = 0
+            else: 
                 self.vel.x = 0
-                self.vel.y = -NAVE_VEL
-        elif self.down_b:
-            if self.right_b:
-                self.vel.x = math.sin(math.pi/4) * NAVE_VEL
-                self.vel.y = math.sin(math.pi/4) * NAVE_VEL
-            elif self.left_b:
-                self.vel.x = -math.sin(math.pi/4) * NAVE_VEL
-                self.vel.y = math.sin(math.pi/4) * NAVE_VEL
-            else:
-                self.vel.x = 0
-                self.vel.y = NAVE_VEL
-        elif self.right_b:
-            self.vel.x = NAVE_VEL
-            self.vel.y = 0
-        elif self.left_b:
-            self.vel.x = -NAVE_VEL
-            self.vel.y = 0
-        """
+                self.vel.y = 0
 
-        v_unit = self.vectorUnitario(self.direccion)
-        if self.up_b:
-            if math.sqrt(self.vel.x**2 + self.vel.x ** 2) <= NAVE_MAX_VEL:
-                self.vel.x = self.vel.x + v_unit.x*0.35
-                self.vel.y = self.vel.y + -v_unit.y*0.35 
-        
-        if(math.sqrt(self.vel.x**2 + self.vel.x ** 2) > 0):
-            if(self.brake_b):
-                self.vel.x *= 0.95
-                self.vel.y *= 0.95
+        elif(self.control == 1):
+            v_unit = self.vectorUnitario(self.direccion)
+            if self.up_b:
+                if math.sqrt(self.vel.x**2 + self.vel.x ** 2) <= NAVE_MAX_VEL:
+                    self.vel.x = self.vel.x + v_unit.x*0.35
+                    self.vel.y = self.vel.y + -v_unit.y*0.35 
+            
+            if(math.sqrt(self.vel.x**2 + self.vel.x ** 2) > 0):
+                if(self.brake_b):
+                    self.vel.x *= 0.95
+                    self.vel.y *= 0.95
+                else:
+                    self.vel.x *= 0.996
+                    self.vel.y *= 0.996
             else:
-                self.vel.x *= 0.996
-                self.vel.y *= 0.996
-        else:
-            self.vel.x = 0
-            self.vel.y = 0
+                self.vel.x = 0
+                self.vel.y = 0
 
     def mov(self):
         self.x += self.vel.x
@@ -151,28 +156,33 @@ class Nave:
         self.posBackL()
         self.posBackR()
         self.calcularArea(self.x,self.y,self.back_l.x,self.back_l.y,self.back_r.x,self.back_r.y)
-        if(self.point % 1000 == 0):
-            if(self.point != 0):
-                self.vida += 1
+        if(self.bonus > 5000):
+            self.vida += 1
+            self.bonus = 0
         self.atk_c += 1
+        self.live_time += 1
     
-    def draw(self,window,navetxt):
+    def draw(self,window,navetxt,vida_tex):
+        
         v_unit = self.vectorUnitario(self.direccion)
         
         navetxt_rotated = pygame.transform.rotate(navetxt, math.degrees(self.direccion-math.pi/2))
         navetxt_rect = navetxt_rotated.get_rect(center=(self.x+v_unit.x*14, self.y-v_unit.y*14))
         window.blit(navetxt_rotated, navetxt_rect.topleft)
         
-        pygame.draw.rect(window,(165,45,45),(10,10,40,40))
+        vida_tex = pygame.transform.scale(vida_tex,(40,40))
+        vida_rec = vida_tex.get_rect()
+        vida_rec.topleft=(20,20)
+        window.blit(vida_tex,vida_rec)
         
-        font = pygame.font.Font('fuentes/pixelart.ttf', 45)
+        font = pygame.font.Font('fuentes/Minecraft.ttf', 45)
         text_surface = font.render(str(self.vida), True, (255, 255, 255))
         text_rect = text_surface.get_rect()
-        text_rect.topleft = (70, 5)
+        text_rect.topleft = (75, 20)
         window.blit(text_surface, text_rect)
         
         text_surface = font.render(str(self.point), True, (255, 255, 255))
-        text_rect.topleft = (140, 5)
+        text_rect.topleft = (250, 20)
         window.blit(text_surface, text_rect)
           
     def disp(self):
@@ -183,28 +193,27 @@ class Nave:
         raise ATK("atk en cd")
         
     def colision(self,asteroides,proyectiles):
-        for roca in asteroides:
-            if (roca.colision(self.front.x,self.front.y)):
-                    return True
-            if (roca.colision(self.back_l.x,self.back_l.y)):
-                    return True
-            if (roca.colision(self.back_r.x,self.back_r.y)):
-                    return True
-            if (roca.colision(self.x,self.y)):
-                    return True
-        for disp in proyectiles:
-            if(disp.timer > 10):
-                if(disp.colision(self.x,self.y,self.back_l.x,self.back_l.y,self.back_r.x,self.back_r.y,self.area)):
-                    return True
+        if(self.live_time > NAVE_INV_TIMER):
+            for roca in asteroides:
+                if (roca.colision(self.front.x,self.front.y)):
+                        return True
+                if (roca.colision(self.back_l.x,self.back_l.y)):
+                        return True
+                if (roca.colision(self.back_r.x,self.back_r.y)):
+                        return True
+                if (roca.colision(self.x,self.y)):
+                        return True
+            for disp in proyectiles:
+                if(disp.timer > 10):
+                    if(disp.colision(self.x,self.y,self.back_l.x,self.back_l.y,self.back_r.x,self.back_r.y,self.area)):
+                        return True
         return False
             
     def respawn(self,x,y):
         self.vida -= 1
         self.x = x
         self.y = y
-        if(self.vida == -1):
-            self.vida = 4
-            self.point = 0
+        self.live_time = 0
     
     def calcularArea(self,x1, y1, x2, y2, x3, y3):
         self.area = abs((x1*(y2 - y3) + x2*(y3 - y1) + x3*(y1 - y2)) / 2.0)

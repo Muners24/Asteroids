@@ -11,8 +11,8 @@ class Asteroide:
         self.radio = radio
         self.time = 0
         if (radio != ASTEROID_RAD0):
-            self.vel.y = math.sin(direccion) * (ASTEROID_V*1.5) * -1
-            self.vel.x = math.cos(direccion) * (ASTEROID_V*1.5)
+            self.vel.y = math.sin(direccion) * (ASTEROID_V*1.6) * -1
+            self.vel.x = math.cos(direccion) * (ASTEROID_V*1.6)
         else:
             self.vel.y = math.sin(direccion) * ASTEROID_V * -1
             self.vel.x = math.cos(direccion) * ASTEROID_V
@@ -61,14 +61,16 @@ class Asteroide:
         return False
     
     def update(self):
+        if(self.outScreen()):
+            if(self.time > ASTEROID_TTL):
+                    self.should_del = True
         self.mov()
-        self.outScreen()
         self.time += 1
-        if(self.time > ASTEROID_TTL):
-            self.should_del = True
+        
         
     def draw(self,window):
         pygame.draw.circle(window,WHITE,(self.x,self.y),self.radio)
+        pygame.draw.circle(window,(0,0,0),(self.x,self.y),self.radio-4)
         
     
         
